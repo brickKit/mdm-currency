@@ -27,7 +27,14 @@
 
 ## 配置指南
 
-全部键见 `component.yaml` 的 `configSchema`（由 SDK 生成，测试核对）。本组件没有自己的配置键。
+全部键见 `component.yaml` 的 `configSchema`（由 SDK 生成，测试核对）。
+
+| 键 | 说明 |
+| --- | --- |
+| `DEPLOYMENT_ID`、`IAM_ISSUER`、`IAM_JWKS_URL`、`AUTHZ_GRPC_URL`、`SERVICE_TLS_CERT_FILE`、`SERVICE_TLS_KEY_FILE`、`SERVICE_TLS_CA_FILE`（必填） | 受保护的用户面与 mTLS 的系统面要用；部署身份、身份与授权的地址在外壳里是进程级的键 |
+| `PG_HOST`、`PG_DATABASE`、`PG_USER`、`PG_PASSWORD`、`PG_SCHEMA`（必填） | 自己的数据库，密码是密钥；迁移另用 `PG_OWNER_USER`、`PG_OWNER_PASSWORD` |
+| `BUS_URL`（必填，密钥）、`IMPLEMENTATION_INSTANCE`（必填） | 消息系统；实现实例是安装时生成的随机身份，事件与来源方法的回答都带它（协议 02） |
+| `AUDIT_GRPC_URL` | 审计组件的系统面；缺时审计记录留在本地，按协议 03 处理 |
 
 ## 契约索引
 
