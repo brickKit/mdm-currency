@@ -1,0 +1,184 @@
+openapi: 3.1.0
+info:
+  title: mdm/currency user surface
+  version: 3.0.0
+  description: >-
+    Currencies, rate types and exchange rates for people (and the front end). Every route needs a platform access
+    token and the operation named in x-operation; what the caller may not see answers 404. Errors are
+    application/problem+json with a reason (be-protocol chapter 04). Lists page by cursor only (protocol 14).
+    The system surface (components) is contract/proto; event payloads are contract/events.
+paths:
+  /api/currency/currencies:
+    get:
+      operationId: listCurrencies
+      x-operation: mdm.currency.read
+      summary: Currencies, by code
+      parameters:
+        - {name: active, in: query, schema: {type: boolean}, description: only active (true) or inactive (false) ones}
+        - {name: q, in: query, schema: {type: string}, description: keyword over code and names (folded, pinyin)}
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: one page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [currencies, next_cursor]
+                properties:
+                  currencies: {type: array, items: {$ref: '#/components/schemas/Currency'}}
+                  next_cursor: {type: string, description: empty on the last page}
+        default: {$ref: '#/components/responses/problem'}
+  /api/currency/currencies/{code}:
+    parameters:
+      - {name: code, in: path, required: true, schema: {type: string, pattern: '^[A-Z]{3}$'}}
+    get:
+      operationId: getCurrency
+      x-operation: mdm.currency.read
+      responses:
+        '200': {description: the currency, content: {application/json: {schema: {$ref: '#/components/schemas/Currency'}}}}
+        default: {$ref: '#/components/responses/problem'}
+    patch:
+      operationId: updateCurrency
+      x-operation: mdm.currency.manage
+      summary: Activate or deactivate a currency, set its rounding, cash unit or translated names
+      description: >-
+        The ISO 4217 data (code, numeric code, minor unit, default name) comes with the component and does not change
+        here. With version, the change applies only to that version (else 409 VERSION_CONFLICT).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                version: {type: integer, minimum: 1}
+                active: {type: boolean}
+                rounding: {enum: [half_away_from_zero, half_even]}
+                cash_unit: {type: [string, 'null'], description: 'a positive decimal string, e.g. 0.05; null: none'}
+                names: {type: object, additionalProperties: {type: string}}
+      responses:
+        '200': {description: the currency after the change, content: {application/json: {schema: {$ref: '#/components/schemas/Currency'}}}}
+        default: {$ref: '#/components/responses/problem'}
+  /api/currency/rate-types:
+    get:
+      operationId: listRateTypes
+      x-operation: mdm.currency.read
+      parameters:
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: one page, by code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rate_types, next_cursor]
+                properties:
+                  rate_types: {type: array, items: {$ref: '#/components/schemas/RateType'}}
+                  next_cursor: {type: string}
+        default: {$ref: '#/components/responses/problem'}
+  /api/currency/rate-types/{code}:
+    parameters:
+      - {name: code, in: path, required: true, schema: {type: string, pattern: '^[a-z][a-z0-9_]{0,31}$'}}
+    put:
+      operationId: putRateType
+      x-operation: mdm.currency.manage
+      summary: Create a rate type, or change its names or activity; the same content again changes nothing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: {type: string, minLength: 1}
+                names: {type: object, additionalProperties: {type: string}}
+                active: {type: boolean, default: true}
+      responses:
+        '200': {description: the rate type, content: {application/json: {schema: {$ref: '#/components/schemas/RateType'}}}}
+        default: {$ref: '#/components/responses/problem'}
+  /api/currency/rates:
+    get:
+      operationId: listRates
+      x-operation: mdm.exchange_rate.read
+      summary: Exchange rates, latest date first
+      parameters:
+        - {name: rate_type, in: query, schema: {type: string}}
+        - {name: from_currency, in: query, schema: {type: string}}
+        - {name: to_currency, in: query, schema: {type: string}}
+        - {name: date_from, in: query, schema: {type: string, format: date}}
+        - {name: date_to, in: query, schema: {type: string, format: date}}
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: one page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rates, next_cursor]
+                properties:
+                  rates: {type: array, items: {$ref: '#/components/schemas/ExchangeRate'}}
+                  next_cursor: {type: string}
+        default: {$ref: '#/components/responses/problem'}
+  /api/currency/rates/effective:
+    get:
+      operationId: effectiveRate
+      x-operation: mdm.exchange_rate.read
+      summary: The rate on the latest date not after the given one (the same answer as RateService.EffectiveRate)
+      parameters:
+        - {name: rate_type, in: query, required: true, schema: {type: string}}
+        - {name: date, in: query, required: true, schema: {type: string, format: date}}
+        - {name: from_currency, in: query, required: true, schema: {type: string}}
+        - {name: to_currency, in: query, required: true, schema: {type: string}}
+      responses:
+        '200': {description: the rate, content: {application/json: {schema: {$ref: '#/components/schemas/ExchangeRate'}}}}
+        default: {$ref: '#/components/responses/problem'}
+  /api/currency/rates/{rate_type}/{date}/{from_currency}/{to_currency}:
+    parameters:
+      - {name: rate_type, in: path, required: true, schema: {type: string}}
+      - {name: date, in: path, required: true, schema: {type: string, format: date}}
+      - {name: from_currency, in: path, required: true, schema: {type: string}}
+      - {name: to_currency, in: path, required: true, schema: {type: string}}
+    put:
+      operationId: putRate
+      x-operation: mdm.exchange_rate.maintain
+      summary: Enter or correct the rate of a type, date and pair; the same rate again changes nothing
+      description: >-
+        One rate per type, date and pair: a correction is a new version of the same record and publishes it again.
+        Documents that snapshotted the earlier rate keep it (protocol 14).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [rate]
+              properties:
+                rate: {type: string, description: 'a positive decimal string, at most 10 decimal places'}
+                source: {type: string, default: manual}
+      responses:
+        '200': {description: the rate, content: {application/json: {schema: {$ref: '#/components/schemas/ExchangeRate'}}}}
+        default: {$ref: '#/components/responses/problem'}
+components:
+  parameters:
+    cursor: {name: cursor, in: query, schema: {type: string}, description: the next_cursor of the previous page}
+    limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+  responses:
+    problem:
+      description: an error (application/problem+json with reason)
+      content:
+        application/problem+json:
+          schema: {type: object, required: [reason], properties: {reason: {type: string}, detail: {type: string}}}
+  schemas:
+    Currency: {$ref: 'events/mdm.currency.changed.v1.schema.json'}
+    RateType: {$ref: 'events/mdm.rate_type.changed.v1.schema.json'}
+    ExchangeRate: {$ref: 'events/mdm.exchange_rate.published.v1.schema.json'}

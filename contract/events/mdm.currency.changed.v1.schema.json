@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brickkit.dev/mdm-currency/events/mdm.currency.changed.v1.schema.json",
+  "title": "mdm.currency.changed.v1",
+  "description": "A currency's complete current state (protocol 02: a full-state event). The record ID is the ISO 4217 code. Also the data of SourceService for AGGREGATE_CURRENCY.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["code", "numeric_code", "minor_unit", "rounding", "cash_unit", "active", "name", "names", "version", "updated_at"],
+  "properties": {
+    "code": {"type": "string", "pattern": "^[A-Z]{3}$"},
+    "numeric_code": {"type": "string", "pattern": "^[0-9]{3}$"},
+    "minor_unit": {"type": "integer", "minimum": 0, "maximum": 4, "description": "decimal places of the minor unit: amounts in this currency round to it"},
+    "rounding": {"enum": ["half_away_from_zero", "half_even"]},
+    "cash_unit": {"type": ["string", "null"], "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]*[1-9])?$", "description": "the cash rounding unit (e.g. 0.05); null: none"},
+    "active": {"type": "boolean", "description": "false: no new documents in it; existing ones keep it"},
+    "name": {"type": "string", "minLength": 1, "description": "the default name"},
+    "names": {"type": "object", "additionalProperties": {"type": "string", "minLength": 1}, "description": "translations by language tag (protocol 14)"},
+    "version": {"type": "integer", "minimum": 1},
+    "updated_at": {"type": "string", "format": "date-time"}
+  }
+}

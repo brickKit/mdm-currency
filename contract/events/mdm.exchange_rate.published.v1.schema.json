@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brickkit.dev/mdm-currency/events/mdm.exchange_rate.published.v1.schema.json",
+  "title": "mdm.exchange_rate.published.v1",
+  "description": "An exchange rate's complete current state, published when it is entered or corrected; the record ID is its UUIDv7. One rate per type, date and pair. Also the data of SourceService for AGGREGATE_EXCHANGE_RATE.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "rate_type", "rate_date", "from_currency", "to_currency", "rate", "source", "version", "updated_at"],
+  "properties": {
+    "id": {"type": "string", "format": "uuid"},
+    "rate_type": {"type": "string"},
+    "rate_date": {"type": "string", "format": "date"},
+    "from_currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+    "to_currency": {"type": "string", "pattern": "^[A-Z]{3}$"},
+    "rate": {"type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]*[1-9])?$", "description": "one unit of from_currency in to_currency; positive, at most 10 decimal places, no trailing zeros"},
+    "source": {"type": "string", "description": "manual, or the rate source adapter that delivered it"},
+    "version": {"type": "integer", "minimum": 1},
+    "updated_at": {"type": "string", "format": "date-time"}
+  }
+}

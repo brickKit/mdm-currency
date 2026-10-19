@@ -1,0 +1,124 @@
+// The system surface of mdm/currency: the source methods of protocol 02 (S1-S3) and the effective rate.
+// Components call it with their service identity; it never filters by a user. The user surface (maintenance and
+// lists) is REST, described by ../../../../../openapi.yaml; the event payloads by ../../../../../events/.
+syntax = "proto3";
+
+package be.mdm.currency.v3;
+
+option go_package = "github.com/brickKit/mdm-currency/contract/v3/gen/go/be/mdm/currency/v3;currencyv3";
+
+// SourceService lets a consumer build and repair a projection of this component's records (protocol 02). Every
+// answer declares the source's implementation instance, its database epoch and the stream's numbered positions as of
+// the answer's own read snapshot.
+service SourceService {
+  // Snapshot pages through every record of one aggregate in a stable order (by ID); an empty next_cursor ends it.
+  rpc Snapshot(SnapshotRequest) returns (SnapshotResponse);
+  // Read answers by ID, at most 500 IDs a call (more is refused, never cut): the current state, a tombstone, or
+  // purged (no record under that ID, never "not found").
+  rpc Read(ReadRequest) returns (ReadResponse);
+}
+
+// RateService answers the rate a document snapshots (protocol 14: documents keep the rate, its date and type).
+service RateService {
+  // EffectiveRate is the rate of the type for the pair on the latest date not after the requested one. No rate
+  // that early: NOT_FOUND. Pairs are explicit: no inverse and no cross rate is derived.
+  rpc EffectiveRate(EffectiveRateRequest) returns (EffectiveRateResponse);
+}
+
+// Aggregate names one kind of record of this component; each has its event type and payload schema.
+enum Aggregate {
+  AGGREGATE_UNSPECIFIED = 0;
+  // mdm.currency.changed.v1; the ID is the ISO 4217 code
+  AGGREGATE_CURRENCY = 1;
+  // mdm.rate_type.changed.v1; the ID is the rate type's code
+  AGGREGATE_RATE_TYPE = 2;
+  // mdm.exchange_rate.published.v1; the ID is the rate's UUIDv7
+  AGGREGATE_EXCHANGE_RATE = 3;
+}
+
+// Stamp is what every answer declares about the source (protocol 02, S3 and step 3).
+message Stamp {
+  // the deployment the source belongs to (protocol 14)
+  string deployment = 1;
+  // the implementation instance (IMPLEMENTATION_INSTANCE)
+  string instance = 2;
+  // the database epoch, "<recovery generation>.<timeline>"
+  string epoch = 3;
+  // per partition of the stream mdm.currency, the highest numbered publish position in the answer's snapshot
+  repeated int64 positions = 4;
+}
+
+// Record is one record's complete current state.
+message Record {
+  string id = 1;
+  // the record's version (S1): +1 on every change
+  int64 version = 2;
+  // the canonical JSON of the record: the same payload as its event (events/<type>.schema.json)
+  bytes data = 3;
+}
+
+message SnapshotRequest {
+  Aggregate aggregate = 1;
+  // empty: the first page
+  string cursor = 2;
+  // 1-500; 0: 500
+  int32 limit = 3;
+}
+
+message SnapshotResponse {
+  repeated Record records = 1;
+  string next_cursor = 2;
+  Stamp stamp = 3;
+}
+
+message ReadRequest {
+  Aggregate aggregate = 1;
+  repeated string ids = 2;
+}
+
+// ReadState is one ID's answer to Read.
+enum ReadState {
+  READ_STATE_UNSPECIFIED = 0;
+  // the record exists: version and data are its current state
+  READ_STATE_EXISTS = 1;
+  // the record was deleted; version is the deleting version (this component deletes nothing yet)
+  READ_STATE_TOMBSTONE = 2;
+  // nothing under that ID: never existed, or its tombstone is gone
+  READ_STATE_PURGED = 3;
+}
+
+message ReadResult {
+  string id = 1;
+  ReadState state = 2;
+  int64 version = 3;
+  bytes data = 4;
+}
+
+message ReadResponse {
+  // one per requested ID, in the requested order
+  repeated ReadResult results = 1;
+  Stamp stamp = 2;
+}
+
+message EffectiveRateRequest {
+  // a rate type's code, e.g. spot
+  string rate_type = 1;
+  // the business date, YYYY-MM-DD
+  string date = 2;
+  // ISO 4217 codes: one unit of from_currency is rate units of to_currency
+  string from_currency = 3;
+  string to_currency = 4;
+}
+
+message EffectiveRateResponse {
+  // the exchange rate's record ID and version (what a document snapshots)
+  string id = 1;
+  int64 version = 2;
+  // a decimal string (protocol 14), up to 10 decimal places
+  string rate = 3;
+  // the date the rate is for, YYYY-MM-DD: not after the requested date
+  string rate_date = 4;
+  string rate_type = 5;
+  string from_currency = 6;
+  string to_currency = 7;
+}

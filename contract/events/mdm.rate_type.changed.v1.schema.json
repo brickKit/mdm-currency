@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brickkit.dev/mdm-currency/events/mdm.rate_type.changed.v1.schema.json",
+  "title": "mdm.rate_type.changed.v1",
+  "description": "A rate type's complete current state; the record ID is its code. Also the data of SourceService for AGGREGATE_RATE_TYPE.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["code", "active", "name", "names", "version", "updated_at"],
+  "properties": {
+    "code": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,31}$"},
+    "active": {"type": "boolean"},
+    "name": {"type": "string", "minLength": 1},
+    "names": {"type": "object", "additionalProperties": {"type": "string", "minLength": 1}},
+    "version": {"type": "integer", "minimum": 1},
+    "updated_at": {"type": "string", "format": "date-time"}
+  }
+}
