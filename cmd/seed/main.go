@@ -117,6 +117,7 @@ func main() {
 		}
 		for i, p := range pairs {
 			if corrected && day.Equal(first) && p.from == "EUR" && p.to == "CNY" {
+				n++ // there, corrected by an earlier run
 				continue
 			}
 			// a gentle, repeatable wave around the base rate (the same date always gives the same rate)
