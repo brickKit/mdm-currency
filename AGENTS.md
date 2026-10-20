@@ -12,6 +12,7 @@
 | `currency/records.go` | 记录的类型、读取与事件 |
 | `currency/source.go` | 系统面（来源方法、有效汇率）与搜索列的回填任务 |
 | `currency/migrations/` | `0001` 表；`0002` ISO 4217 全表与 `spot`（`scripts/iso4217.py` 生成） |
+| `cmd/seed/` | 种子：角色与授予、汇率类型、双向的汇率（`make seed`） |
 | `contract/` | 本组件发布的契约，单独的模块：`contract/proto/`、`contract/events/`（载荷 schema）、`contract/openapi.yaml` |
 
 | 想改 | 从这里开始 | 然后 |
