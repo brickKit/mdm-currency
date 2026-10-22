@@ -4,9 +4,15 @@ kind: Component
 metadata:
   id: mdm/currency
   name: Currency
-  version: 3.0.3
+  version: 3.0.4
   description: "Currencies (ISO 4217, minor unit, rounding, cash unit), rate types and daily exchange rates; the effective rate on a date for documents to snapshot; full-state events and the source methods of protocol 02"
   repository: https://github.com/brickKit/mdm-currency
+
+events:
+  publishes:
+    - mdm.currency.changed.v1
+    - mdm.exchange_rate.published.v1
+    - mdm.rate_type.changed.v1
 
 deployment:
   type: container
