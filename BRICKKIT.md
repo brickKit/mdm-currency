@@ -14,7 +14,7 @@
 
 ## 部署前准备
 
-- 数据库：自己的 schema、运行角色与属主角色（装配项目注册表的 `mdm_currency`）。迁移写入 ISO 4217 全表与汇率类型 `spot`。
+- 数据库：PostgreSQL 16 及以上；schema `mdm_currency`，属主角色 `mdm_currency_owner`（只供迁移）与运行角色 `mdm_currency_rw`（只有读写数据的权限），名字来自装配项目的注册表。三者由部署方在第一次启动前建好（be-assembly-standard 的 `make db-init` 按装配进项目的组件配置生成并执行）；表由本组件的迁移建，迁移里不建角色、不授权。迁移写入 ISO 4217 全表与汇率类型 `spot`。
 - 消息系统（`BUS_URL`）与实现实例（`IMPLEMENTATION_INSTANCE`，安装时生成的随机身份）：每次变化以完整状态事件发布到流 `mdm.currency`（4 个分区）。
 - 部署的服务证书（`SERVICE_TLS_*`）：系统面只接受 mTLS，部署里每个组件都可以调用。
 - 身份与授权（`IAM_*`、`AUTHZ_GRPC_URL`、`DEPLOYMENT_ID`）：用户面受授权保护；审计（`AUDIT_GRPC_URL`）记录每次维护。
