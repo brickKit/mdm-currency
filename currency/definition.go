@@ -17,7 +17,7 @@ import (
 // Identity of the component.
 const (
 	ID       = "mdm/currency"
-	Version  = "3.0.5"
+	Version  = "3.0.6"
 	GRPCPort = 9226
 )
 
