@@ -4,7 +4,7 @@ kind: Component
 metadata:
   id: mdm/currency
   name: Currency
-  version: 3.0.17
+  version: 3.0.18
   description: "Currencies (ISO 4217, minor unit, rounding, cash unit), rate types and daily exchange rates; the effective rate on a date for documents to snapshot; full-state events and the source methods of protocol 02"
   repository: https://github.com/brickKit/mdm-currency
 
@@ -47,6 +47,7 @@ configSchema:
       enum:
         - frozen
         - redelivering
+        - replaying
       type: string
     AUDIT_GRPC_URL:
       description: 'process-level: the same for every member of a shell'
