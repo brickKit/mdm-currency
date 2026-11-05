@@ -64,6 +64,8 @@
 
 ## 实现状态
 
+3.0.17（底层先行第 4 项 T8 的级联）：be-sdk-go alpha.81（恢复模式、补发与消费者进度）；流的补发（`be.source.v1.ResendService`，操作 `mdm.currency.system.resend`，登记在本组件的 system 资源下，部署内任何组件可调用，线协议 P6.38）；清单声明 `RECOVERY_PHASE`。
+
 实验第 6 步的范围：汇率来源适配器还没有，汇率只能人工维护。
 
 ## 部署与替换
