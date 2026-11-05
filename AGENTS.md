@@ -7,6 +7,7 @@
 | 位置 | 内容 |
 | --- | --- |
 | `currency/definition.go` | 组件定义：身份、流与事件类型、资源与操作 |
+| `currency/checks.go` | 整套恢复的核对（线协议第 14 章，SDK 的 `CheckService`，只许恢复工具调用）：本组件审计过的对象按版本答“还在不在”（`Presence`） |
 | `currency/module.go` | 用户面：币种的修改、汇率类型、汇率的录入与更正、有效汇率；审计与事件 |
 | `currency/lists.go` | 三个列表（游标分页、筛选、关键字） |
 | `currency/records.go` | 记录的类型、读取与事件 |
