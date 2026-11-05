@@ -238,6 +238,9 @@ func TestCurrencyEndToEnd(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "7.7", rate.Rate)
 	assert.Equal(t, "2026-10-18", rate.RateDate)
+
+	t.Run("recovery checks", func(t *testing.T) { checksStory(t, w, admin, Rates, r2["id"].(string)) })
+	t.Run("recovery checks of a rate type", func(t *testing.T) { checksStory(t, w, admin, Currencies, "rate_type:spot") })
 }
 
 // portFree fails at once when a port the member needs is taken: a running cell (host ports 18xxx) or another member
