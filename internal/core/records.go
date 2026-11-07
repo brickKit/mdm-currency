@@ -1,4 +1,4 @@
-package currency
+package core
 
 import (
 	"context"
@@ -52,14 +52,14 @@ type Rate struct {
 // The columns each record is read with; trailing zeros of the numeric columns are dropped in SQL (the contract's
 // decimal strings carry none: protocol 14, security 09a).
 const (
-	currencyCols = `code, numeric_code, minor_unit, rounding, trim_scale(cash_unit)::text, active, name, names, version,
+	CurrencyCols = `code, numeric_code, minor_unit, rounding, trim_scale(cash_unit)::text, active, name, names, version,
 		updated_at`
-	rateTypeCols = `code, active, name, names, version, updated_at`
-	rateCols     = `id::text, rate_type, rate_date::text, from_currency, to_currency, trim_scale(rate)::text, source, version,
+	RateTypeCols = `code, active, name, names, version, updated_at`
+	RateCols     = `id::text, rate_type, rate_date::text, from_currency, to_currency, trim_scale(rate)::text, source, version,
 		updated_at`
 )
 
-func scanCurrency(row pgx.Row) (Currency, error) {
+func ScanCurrency(row pgx.Row) (Currency, error) {
 	var c Currency
 	var names []byte
 	var at time.Time
@@ -71,7 +71,7 @@ func scanCurrency(row pgx.Row) (Currency, error) {
 	return c, err
 }
 
-func scanRateType(row pgx.Row) (RateType, error) {
+func ScanRateType(row pgx.Row) (RateType, error) {
 	var t RateType
 	var names []byte
 	var at time.Time
@@ -82,7 +82,7 @@ func scanRateType(row pgx.Row) (RateType, error) {
 	return t, err
 }
 
-func scanRate(row pgx.Row) (Rate, error) {
+func ScanRate(row pgx.Row) (Rate, error) {
 	var r Rate
 	var at time.Time
 	err := row.Scan(&r.ID, &r.RateType, &r.RateDate, &r.FromCurrency, &r.ToCurrency, &r.Rate, &r.Source, &r.Version, &at)
@@ -91,45 +91,45 @@ func scanRate(row pgx.Row) (Rate, error) {
 }
 
 // errNone is a lookup that found no row.
-var errNone = errors.New("no such record")
+var ErrNone = errors.New("no such record")
 
 func one[T any](row pgx.Row, scan func(pgx.Row) (T, error)) (T, error) {
 	v, err := scan(row)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return v, errNone
+		return v, ErrNone
 	}
 	return v, err
 }
 
-func getCurrency(ctx context.Context, tx db.Tx, code string, lock bool) (Currency, error) {
-	q := `SELECT ` + currencyCols + ` FROM currency WHERE code = $1`
+func GetCurrency(ctx context.Context, tx db.Tx, code string, lock bool) (Currency, error) {
+	q := `SELECT ` + CurrencyCols + ` FROM currency WHERE code = $1`
 	if lock {
 		q += ` FOR UPDATE`
 	}
-	return one(tx.QueryRow(ctx, q, code), scanCurrency)
+	return one(tx.QueryRow(ctx, q, code), ScanCurrency)
 }
 
-func getRateType(ctx context.Context, tx db.Tx, code string, lock bool) (RateType, error) {
-	q := `SELECT ` + rateTypeCols + ` FROM rate_type WHERE code = $1`
+func GetRateType(ctx context.Context, tx db.Tx, code string, lock bool) (RateType, error) {
+	q := `SELECT ` + RateTypeCols + ` FROM rate_type WHERE code = $1`
 	if lock {
 		q += ` FOR UPDATE`
 	}
-	return one(tx.QueryRow(ctx, q, code), scanRateType)
+	return one(tx.QueryRow(ctx, q, code), ScanRateType)
 }
 
-func getRate(ctx context.Context, tx db.Tx, id string) (Rate, error) {
-	return one(tx.QueryRow(ctx, `SELECT `+rateCols+` FROM exchange_rate WHERE id = $1`, id), scanRate)
+func GetRate(ctx context.Context, tx db.Tx, id string) (Rate, error) {
+	return one(tx.QueryRow(ctx, `SELECT `+RateCols+` FROM exchange_rate WHERE id = $1`, id), ScanRate)
 }
 
-// effective is the rate of the type and pair on the latest date not after date.
-func effective(ctx context.Context, tx db.Tx, rateType, date, from, to string) (Rate, error) {
-	return one(tx.QueryRow(ctx, `SELECT `+rateCols+` FROM exchange_rate WHERE rate_type = $1 AND from_currency = $2
-		AND to_currency = $3 AND rate_date <= $4::date ORDER BY rate_date DESC LIMIT 1`, rateType, from, to, date), scanRate)
+// Effective is the rate of the type and pair on the latest date not after date.
+func Effective(ctx context.Context, tx db.Tx, rateType, date, from, to string) (Rate, error) {
+	return one(tx.QueryRow(ctx, `SELECT `+RateCols+` FROM exchange_rate WHERE rate_type = $1 AND from_currency = $2
+		AND to_currency = $3 AND rate_date <= $4::date ORDER BY rate_date DESC LIMIT 1`, rateType, from, to, date), ScanRate)
 }
 
-// emit writes the record's full-state event into the outbox, in the transaction that changed it (protocol 02, S2).
-func (m *Module) emit(ctx context.Context, tx db.Tx, typ, id string, version int64, data any) error {
-	_, err := m.rt.Events.Emit(ctx, tx, Stream, events.Event{Type: typ, RecordID: id, Version: version,
+// Emit writes the record's full-state event into the outbox, in the transaction that changed it (protocol 02, S2).
+func Emit(m *Base, ctx context.Context, tx db.Tx, typ, id string, version int64, data any) error {
+	_, err := m.RT.Events.Emit(ctx, tx, Stream, events.Event{Type: typ, RecordID: id, Version: version,
 		Projection: events.Full, Data: data})
 	return err
 }

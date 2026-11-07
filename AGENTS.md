@@ -4,31 +4,40 @@
 
 ## 代码地图
 
-| 位置 | 内容 |
+代码按业务模块分层。**先读这一节，再进目录**：每个代码目录都有自己的 `AGENTS.md`（同目录的 `CLAUDE.md` 让 Claude Code 读这个目录的文件时自动带上它），写这一层负责什么、不负责什么、每个文件、依赖谁、测在哪。
+
+| 目录 | 是什么 |
 | --- | --- |
-| `currency/definition.go` | 组件定义：身份、流与事件类型、资源与操作 |
-| `currency/checks.go` | 整套恢复的核对（线协议第 14 章，SDK 的 `CheckService`，只许恢复工具调用）：本组件审计过的对象按版本答“还在不在”（`Presence`） |
-| `currency/module.go` | 用户面：币种的修改、汇率类型、汇率的录入与更正、有效汇率；审计与事件 |
-| `currency/lists.go` | 三个列表（游标分页、筛选、关键字） |
-| `currency/records.go` | 记录的类型、读取与事件 |
-| `currency/source.go` | 系统面（来源方法、有效汇率）与搜索列的回填任务 |
+| [`currency/`](currency/AGENTS.md) | 入口：组件定义与组装（路由、系统面、后台工作、恢复核对都在这里登记，转给业务模块）；不写业务。`main.go` 与外壳只引用它 |
+| [`internal/`](internal/AGENTS.md) | 业务：下面的模块各一个包；模块之间的依赖表在它的 `AGENTS.md` |
+| [`itest/`](itest/AGENTS.md) | 集成测试，按业务流程分文件；它的 `AGENTS.md` 是测试索引 |
 | `currency/migrations/` | `0001` 表；`0002` ISO 4217 全表与 `spot`（`scripts/iso4217.py` 生成） |
 | `cmd/seed/` | 种子：角色与授予、汇率类型、双向的汇率（`make seed`） |
 | `contract/` | 本组件发布的契约，单独的模块：`contract/proto/`、`contract/events/`（载荷 schema）、`contract/openapi.yaml` |
 | `docs/design.md` | 设计：术语、表、规则、命令、事件、实现状态 |
 
+业务模块（`internal/` 下）：
+
+| 模块 | 负责 | 拥有的表 |
+| --- | --- | --- |
+| [`currencies`](internal/currencies/AGENTS.md) | 币种：读取、部署能改的那几项（现金舍入、译名、启用）、列表与关键字、搜索列的回填 | `currency` |
+| [`rates`](internal/rates/AGENTS.md) | 汇率类型与汇率：录入与更正、有效汇率、列表 | `rate_type`、`exchange_rate` |
+| [`source`](internal/source/AGENTS.md) | 系统面：给其他组件的来源方法（`Read`、`Snapshot`）与有效汇率 | — |
+
+共用的：[`core`](internal/core/AGENTS.md)（名字与资源定义、校验、审计与事件的写法、记录的类型与读取、列表的共用部分）。
+
 | 想改 | 从这里开始 | 然后 |
 | --- | --- | --- |
-| 汇率的规则（唯一性、更正、有效汇率） | `module.go` 的 `putRate`、`records.go` 的 `effective` | 集成测试的汇率一段 |
-| 币种表 | `scripts/iso4217.py` | 重新生成 `0002`，集成测试 |
-| 加一个用户面路由 | `contract/openapi.yaml` | `module.go` 的 `Routes`；`contract_test.go` 核对两边一致 |
+| 汇率的规则（唯一性、更正、有效汇率） | `internal/rates` 的 `PutRate`、`internal/core/records.go` 的 `Effective` | `itest/rates_integration_test.go` |
+| 币种表 | `scripts/iso4217.py` | 重新生成 `0002`，`itest/currencies_integration_test.go` |
+| 部署能改币种的哪几项 | `internal/currencies` 的 `UpdateCurrency` | `docs/design.md` 的规则 |
+| 加一个用户面路由 | `contract/openapi.yaml` | 处理函数写在它的模块里，在 `currency/module.go` 的 `Routes` 登记；`contract_test.go` 核对两边一致 |
 | 加字段、加接口、改事件 | 装配项目 be-assembly-standard 规范里的“改动配方” | `docs/design.md` 的数据与命令 |
 
 ## 构建与测试
 
-- `go test ./...`（`make test`）：单元测试，核对清单的 `configSchema` 与 `events`、OpenAPI 与路由、事件载荷与 schema、合并安全。
-- `go test -tags integration ./currency/`（`make test-integration`）：对真实的 PostgreSQL 与消息系统，例如 `BE_SDK_TEST_PG_ADMIN=postgres://postgres:<口令>@localhost:5432/brickkit_test_db`（口令是装配项目 `.env` 的 `POSTGRES_PASSWORD`）与 `BE_SDK_TEST_NATS_URL=nats://localhost:4222`；用 be-sdk-go 的 `sectest` 测试部署。
-- 集成测试的前提：装配项目里 `make up` 起了 `be-postgres` 与 `be-nats`；`be-postgres` 里有库 `brickkit_test_db`（没有就 `docker exec be-postgres createdb -U postgres brickkit_test_db`；`make test-db-init` 的组件清单还是旧的，不认这个组件）；测试每次开始时删掉再建自己的 schema `mdm_currency_it`，跑完留着；端口 28226、9226 要空着，被占时测试直接失败。
+- `go test ./...`（`make test`）：单元测试：入口包的清单、OpenAPI 与路由、事件载荷、合并安全；`internal/core` 的校验。
+- `make test-integration`（`go test -tags integration ./itest/`）：真实的 PostgreSQL 与消息系统；每个文件测哪条流程、要什么前提，在 [itest/AGENTS.md](itest/AGENTS.md)。
 - `brickkit lint`
 
 ## 设计取舍

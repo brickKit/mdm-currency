@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	core "github.com/brickKit/mdm-currency/v3/internal/core"
+
 	"github.com/brickKit/be-sdk-go/v3/db"
 	"github.com/brickKit/be-sdk-go/v3/recovery"
 )
@@ -13,8 +15,8 @@ import (
 func (m *Module) RecoveryChecks(c *recovery.Checks) error {
 	currencies := recovery.TablePresence("currency", "code", "version")
 	rateTypes := recovery.TablePresence("rate_type", "code", "version")
-	// a rate type is audited under Currencies as "rate_type:<code>" (module.go)
-	c.Presence(Currencies, func(ctx context.Context, tx db.Tx, ids []string) (map[string]int64, error) {
+	// a rate type is audited under Currencies as "rate_type:<code>" (internal/rates)
+	c.Presence(core.Currencies, func(ctx context.Context, tx db.Tx, ids []string) (map[string]int64, error) {
 		var codes, types []string
 		for _, id := range ids {
 			if code, ok := strings.CutPrefix(id, "rate_type:"); ok {
@@ -33,6 +35,6 @@ func (m *Module) RecoveryChecks(c *recovery.Checks) error {
 		}
 		return out, err
 	})
-	c.Presence(Rates, recovery.TablePresence("exchange_rate", "id", "version"))
+	c.Presence(core.Rates, recovery.TablePresence("exchange_rate", "id", "version"))
 	return nil
 }
